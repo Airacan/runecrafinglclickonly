@@ -4,15 +4,12 @@ import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
 import net.runelite.api.events.ClientTick;
 import net.runelite.api.events.MenuEntryAdded;
-import net.runelite.api.events.MenuShouldLeftClick;
 import net.runelite.api.widgets.Widget;
 import net.runelite.api.widgets.WidgetID;
 import net.runelite.api.widgets.WidgetInfo;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
-import net.runelite.client.plugins.menuentryswapper.ShiftDepositMode;
-import net.runelite.client.plugins.menuentryswapper.ShiftWithdrawMode;
 import net.runelite.client.util.Text;
 
 import javax.inject.Inject;
