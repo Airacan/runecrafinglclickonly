@@ -26,8 +26,6 @@ import javax.inject.Inject;
 )
 public class RunecraftingLClickOnlyPlugin extends Plugin {
 
-    private boolean forceRightClickFlag = true;
-
     @Inject
     private Client client;
 
@@ -41,24 +39,22 @@ public class RunecraftingLClickOnlyPlugin extends Plugin {
         log.info("RunecraftingLClickOnly stopped!");
     }
 
+    /** onMenuEntryAdded
+     * @param menuEntryAdded
+     * Chunk of code taken from Menu Entity Swapper for bank specific actions such as changing the default action of Rune Pouches from deposit to 'Fill'
+     * most of the code remains the same.
+     */
     @Subscribe
     public void onMenuEntryAdded(MenuEntryAdded menuEntryAdded)
     {
-        // This swap needs to happen prior to drag start on click, which happens during
-        // widget ticking and prior to our client tick event. This is because drag start
-        // is what builds the context menu row which is what the eventual click will use
-
-        // Swap to shift-click deposit behavior
-        // Deposit- op 1 is the current withdraw amount 1/5/10/x for deposit box interface and chambers of xeric storage unit.
-        // Deposit- op 2 is the current withdraw amount 1/5/10/x for bank interface
-        if (shiftModifier() && menuEntryAdded.getType() == MenuAction.CC_OP.getId()
+        if (menuEntryAdded.getType() == MenuAction.CC_OP.getId()
                 && (menuEntryAdded.getIdentifier() == 2 || menuEntryAdded.getIdentifier() == 1)
                 && (menuEntryAdded.getOption().startsWith("Deposit-") || menuEntryAdded.getOption().startsWith("Store") || menuEntryAdded.getOption().startsWith("Donate")))
         {
 
             final int widgetGroupId = WidgetInfo.TO_GROUP(menuEntryAdded.getActionParam1());
 
-            final int opId =
+            final int opId = //These are the opIds for 0/0/9 (Extra action : Eat, use, etc) and 5/4/8 (Deposit-all) refer to Menu Entity Swapper configs for more context.
                     widgetGroupId == WidgetID.DEPOSIT_BOX_GROUP_ID ? menuEntryAdded.getTarget().contains("pouch") ?
                     0 : 5
                     : widgetGroupId == WidgetID.CHAMBERS_OF_XERIC_STORAGE_UNIT_INVENTORY_GROUP_ID ? menuEntryAdded.getTarget().contains("pouch") ?
@@ -68,15 +64,12 @@ public class RunecraftingLClickOnlyPlugin extends Plugin {
 
             final int actionId = opId >= 6 ? MenuAction.CC_OP_LOW_PRIORITY.getId() : MenuAction.CC_OP.getId();
 
-            if (menuEntryAdded.getTarget().contains("rune") || menuEntryAdded.getTarget().contains("pouch")) {
+            if (menuEntryAdded.getTarget().contains("rune") || menuEntryAdded.getTarget().contains("pouch")) { //Only use for Runes and Essence Pouches
                 bankModeSwap(actionId, opId);
             }
         }
 
-        // Swap to shift-click withdraw behavior
-        // Deposit- op 1 is the current withdraw amount 1/5/10/x
-        if (shiftModifier()
-                && menuEntryAdded.getType() == MenuAction.CC_OP.getId() && menuEntryAdded.getIdentifier() == 1
+        if (menuEntryAdded.getType() == MenuAction.CC_OP.getId() && menuEntryAdded.getIdentifier() == 1 //Same as above but Withdraw-all for Rune Essence
                 && menuEntryAdded.getOption().startsWith("Withdraw"))
         {
             final int widgetGroupId = WidgetInfo.TO_GROUP(menuEntryAdded.getActionParam1());
@@ -97,7 +90,7 @@ public class RunecraftingLClickOnlyPlugin extends Plugin {
             }
         }
     }
-
+    //Code also taken directly from Menu Entity Swapper, not edited.
     private void bankModeSwap(int entryTypeId, int entryIdentifier)
     {
         MenuEntry[] menuEntries = client.getMenuEntries();
@@ -120,15 +113,19 @@ public class RunecraftingLClickOnlyPlugin extends Plugin {
         }
     }
 
+    /** onClientTick
+     * @param event
+     * Sets default action to Empty for rune pouches while outside of bank.
+     */
     @Subscribe
     public void onClientTick(ClientTick event) {
-        if (client.getGameState() != GameState.LOGGED_IN || client.isMenuOpen())
+        if (client.getGameState() != GameState.LOGGED_IN || client.isMenuOpen()) //If logged in
         {
             return;
         }
 
         Widget bankContainer = client.getWidget(WidgetInfo.BANK_ITEM_CONTAINER);
-        if (bankContainer == null || bankContainer.isSelfHidden()) {
+        if (bankContainer == null || bankContainer.isSelfHidden()) { //If NOT in Bank
 
             MenuEntry[] menuEntries = client.getMenuEntries();
             int newIndex = -1;
@@ -136,8 +133,8 @@ public class RunecraftingLClickOnlyPlugin extends Plugin {
 
             for (int i = topIndex; i >= 0; --i) {
                 if (menuEntries[i].getTarget().contains("pouch")) {
-                    if (Text.removeTags(menuEntries[i].getOption()).equals("Empty")) {
-                        newIndex = i;
+                    if (Text.removeTags(menuEntries[i].getOption()).equals("Empty")) { //Find Empty option
+                        newIndex = i; //Set to index
                         break;
                     }
                 }
@@ -148,64 +145,13 @@ public class RunecraftingLClickOnlyPlugin extends Plugin {
                 return;
             }
 
-            MenuEntry entry1 = menuEntries[newIndex];
+            MenuEntry entry1 = menuEntries[newIndex]; //Swap with default
             MenuEntry entry2 = menuEntries[topIndex];
 
             menuEntries[newIndex] = entry2;
             menuEntries[topIndex] = entry1;
 
-            client.setMenuEntries(menuEntries);
-
-        }else{
-            MenuEntry[] menuEntries = client.getMenuEntries();
-            int topIndex = menuEntries.length-1;
-
-            for (int i = topIndex; i >= 0; --i)
-            {
-                /*
-                if (menuEntries[i].getTarget().contains("pouch")) {
-                    if (Text.removeTags(menuEntries[i].getOption()).equals("Fill")) {
-                        MenuEntry entry = menuEntries[i];
-
-                        // Raise the priority of the op so it doesn't get sorted later
-                        entry.setType(MenuAction.CC_OP.getId());
-
-                        MenuEntry entry1 = menuEntries[i];
-                        MenuEntry entry2 = menuEntries[topIndex];
-
-                        menuEntries[i] = entry2;
-                        menuEntries[topIndex] = entry1;
-
-                        client.setMenuEntries(menuEntries);
-                        break;
-                    }
-                }
-                */
-                if (menuEntries[i].getTarget().contains("essence")) {
-                    if (Text.removeTags(menuEntries[i].getOption()).equals("Withdraw-All")) {
-                        MenuEntry entry = menuEntries[i];
-
-                        // Raise the priority of the op so it doesn't get sorted later
-                        entry.setType(MenuAction.CC_OP.getId());
-
-                        MenuEntry entry1 = menuEntries[i];
-                        MenuEntry entry2 = menuEntries[topIndex];
-
-                        menuEntries[i] = entry2;
-                        menuEntries[topIndex] = entry1;
-
-                        client.setMenuEntries(menuEntries);
-
-
-                        break;
-                    }
-                }
-            }
+            client.setMenuEntries(menuEntries); //Set
         }
-    }
-
-    private boolean shiftModifier()
-    {
-        return true;
     }
 }
